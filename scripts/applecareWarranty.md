@@ -20,6 +20,13 @@ This script automatically:
 3. Updates Jamf Pro inventory with current warranty information
 4. Provides centralized warranty management
 
+### Oomnitza Integration and data improvements
+This is a quick overview of taking the updated information in Jamf and enhancing Oomnitza with AppleCare Warranty Information
+1. Pulls the data from Jamf Pro into Oomnitza Warranty End date field
+2. Improve visibility within Oomnitza to provide EOL or EOW information
+3. Better planning with device age and lifecycle
+4. Provide insight and value when forecasting device replacement or refresh
+
 ## Technical Implementation
 
 ### Authentication Flow
