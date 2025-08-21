@@ -102,6 +102,7 @@ elif warrantyDate=$(date -jf "%b %d, %Y" "$dateString" "+%Y-%m-%d" 2>/dev/null);
 
 ### Jamf Pro API Integration
 
+The script is also using the Jamf Pro API (v. classic)
 The script updates Jamf Pro using the REST API:
 ```bash
 response=$(curl -X 'PATCH' \
@@ -147,6 +148,11 @@ response=$(curl -X 'PATCH' \
 - `system_profiler` (built-in)
 - `xmllint` (built-in)
 - `plutil` (built-in)
+
+### Oomnitza Requirements
+Access to an Oomnitza instance
+Ability to add or update the Asset integrations in Oomnitza
+Confirm the Oomnitza integration is leveraging the latest credentials for Jamf Pro
 
 ### Jamf Pro Configuration
 - API client with appropriate permissions
