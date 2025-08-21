@@ -134,6 +134,9 @@ response=$(curl -X 'PATCH' \
 - **Audit Preparation**: Ensure warranty information is accurate for audits
 - **Vendor Management**: Track AppleCare coverage for vendor relationships
 
+### 4. Oomnitza Visibility and Asset Support
+- **Warranty Coverage Reports**: Generate reports/dashboards on warranty status
+
 ## Prerequisites
 
 ### System Requirements
