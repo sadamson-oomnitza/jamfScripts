@@ -65,9 +65,44 @@ setup_logging() {
 # Setup logging
 setup_logging
 
-# Latest version constants
-LATEST_JAMF_CONNECT_VERSION="3.2"
-LATEST_SELF_SERVICE_VERSION="2.7"
+# Latest version constants (Updated as of 2025)
+LATEST_JAMF_CONNECT_VERSION="3.3"
+LATEST_SELF_SERVICE_VERSION="2.8"
+
+# Function to check for latest versions from Jamf (if network available)
+check_latest_versions() {
+    local jamf_connect_latest="$LATEST_JAMF_CONNECT_VERSION"
+    local self_service_latest="$LATEST_SELF_SERVICE_VERSION"
+    
+    log_message "Checking for latest versions from Jamf documentation"
+    
+    # Try to get latest Jamf Connect version from documentation
+    if command -v curl &> /dev/null; then
+        # Check Jamf Connect documentation for latest version
+        local jamf_connect_doc=$(curl -s --max-time 5 "https://docs.jamf.com/jamf-connect/" 2>/dev/null | grep -o "Jamf Connect [0-9]\+\.[0-9]\+" | head -1 | grep -o "[0-9]\+\.[0-9]\+" || echo "")
+        
+        if [[ -n "$jamf_connect_doc" ]]; then
+            jamf_connect_latest="$jamf_connect_doc"
+            log_message "Found latest Jamf Connect version from docs: $jamf_connect_latest"
+        else
+            log_message "Using default Jamf Connect version: $jamf_connect_latest"
+        fi
+        
+        # Check Self Service documentation for latest version
+        local self_service_doc=$(curl -s --max-time 5 "https://docs.jamf.com/self-service/" 2>/dev/null | grep -o "Self Service [0-9]\+\.[0-9]\+" | head -1 | grep -o "[0-9]\+\.[0-9]\+" || echo "")
+        
+        if [[ -n "$self_service_doc" ]]; then
+            self_service_latest="$self_service_doc"
+            log_message "Found latest Self Service version from docs: $self_service_latest"
+        else
+            log_message "Using default Self Service version: $self_service_latest"
+        fi
+    else
+        log_message "curl not available, using default versions"
+    fi
+    
+    echo "$jamf_connect_latest:$self_service_latest"
+}
 
 # App locations
 jamfConnectLocation="/Applications/Jamf Connect.app"
@@ -75,6 +110,12 @@ jamfSelfServiceLocation="/Applications/Self Service.app"
 jamfSelfServicePlusLocation="/Applications/Self Service+.app"
 
 log_message "Starting Jamf Connect and Self Service version check"
+
+# Get latest versions (with fallback to defaults)
+latest_versions=$(check_latest_versions)
+IFS=':' read -r LATEST_JAMF_CONNECT_VERSION LATEST_SELF_SERVICE_VERSION <<< "$latest_versions"
+
+log_message "Using latest versions - Jamf Connect: $LATEST_JAMF_CONNECT_VERSION, Self Service: $LATEST_SELF_SERVICE_VERSION"
 
 # Function to check if app is running
 check_app_running() {

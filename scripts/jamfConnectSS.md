@@ -24,7 +24,8 @@ This script serves several important functions in enterprise macOS management:
 - **Comprehensive Logging**: Detailed logging for troubleshooting
 
 ### Advanced Features
-- **Latest Version Tracking**: Configurable latest version constants
+- **Latest Version Tracking**: Configurable latest version constants with dynamic checking
+- **Dynamic Version Updates**: Attempts to fetch latest versions from Jamf documentation
 - **Self Service+ Support**: Prioritizes Self Service+ over standard Self Service
 - **Bundle ID Detection**: Identifies application bundle identifiers
 - **Error Handling**: Comprehensive error handling with proper exit codes
@@ -34,11 +35,26 @@ This script serves several important functions in enterprise macOS management:
 
 ### Latest Version Constants
 ```bash
-LATEST_JAMF_CONNECT_VERSION="3.2"
-LATEST_SELF_SERVICE_VERSION="2.7"
+LATEST_JAMF_CONNECT_VERSION="3.3"
+LATEST_SELF_SERVICE_VERSION="2.8"
 ```
 
-These constants define the latest versions for comparison.
+These constants define the latest versions for comparison. The script also includes dynamic version checking from Jamf documentation when network access is available.
+
+### Dynamic Version Checking
+```bash
+check_latest_versions() {
+    # Attempts to fetch latest versions from Jamf documentation
+    # Falls back to default constants if network unavailable
+    # Timeout protection prevents hanging on network requests
+}
+```
+
+**Features:**
+- **Network Timeout**: 5-second timeout prevents hanging
+- **Graceful Fallback**: Uses default versions if network unavailable
+- **Documentation Parsing**: Extracts version numbers from Jamf docs
+- **Error Handling**: Continues with defaults if parsing fails
 
 ### Application Detection
 
@@ -103,7 +119,7 @@ check_app_running() {
 
 #### Both Applications Latest
 ```xml
-<result>✅ Jamf Connect 3.2 (Latest) | Self Service+ 2.7 (Latest)</result>
+<result>✅ Jamf Connect 3.3 (Latest) | Self Service+ 2.8 (Latest)</result>
 ```
 
 #### Neither Installed
@@ -165,7 +181,7 @@ chmod +x jamfConnectSS.sh
 
 #### Successful Check
 ```
-<result>✅ Jamf Connect 3.2 (Latest) | Self Service+ 2.7 (Latest)</result>
+<result>✅ Jamf Connect 3.3 (Latest) | Self Service+ 2.8 (Latest)</result>
 ```
 
 #### Outdated Applications
