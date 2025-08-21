@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Title:  getAppleCareWarrantyInfo_JSON.sh
+# Title:  applecareWarranty.sh
 # Created By:  HCS Technology Group
 # Version: 2 (Converted to JSON)
 # Creation Date: 12-30-24
