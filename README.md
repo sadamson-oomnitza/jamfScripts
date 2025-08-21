@@ -8,13 +8,13 @@ This repository contains scripts that extend the functionality of Jamf Pro by pr
 
 ## Scripts
 
-### AppleCare Warranty Checker (`applecareWarranty.sh`)
+### AppleCare Warranty Checker - JSON Version (`applecareWarranty.sh`)
 
 **Version:** 2.0  
 **Last Updated:** August 21, 2025  
 **Compatibility:** macOS Ventura - Sequoia  
 
-Automatically retrieves and updates AppleCare warranty information in Jamf Pro by reading warranty data from Apple's local JSON cache files.
+Automatically retrieves and updates AppleCare warranty information in Jamf Pro by reading warranty data from Apple's local JSON cache files. This is the **recommended version** for current macOS systems.
 
 #### Features
 - Reads AppleCare warranty data from local JSON cache files
@@ -22,6 +22,7 @@ Automatically retrieves and updates AppleCare warranty information in Jamf Pro b
 - Supports multiple date formats (US and International)
 - Uses Jamf Pro API for secure data updates
 - Includes fallback parsing methods (jq and Python3)
+- Enhanced error handling and debugging output
 
 #### Prerequisites
 - macOS device signed in with an Apple ID
@@ -62,6 +63,78 @@ The script reads warranty data from:
 - `jq` (preferred) or `python3` (fallback)
 - `system_profiler` (built-in)
 - `xmllint` (built-in)
+
+---
+
+### AppleCare Warranty Checker - Legacy PLIST Version (`getAppleCareWarrantyInfo.sh`)
+
+**Version:** 1.0  
+**Last Updated:** December 31, 2024  
+**Compatibility:** macOS Ventura - Sequoia  
+**Status:** Legacy - Use JSON version for new deployments
+
+Legacy version that reads AppleCare warranty information from `.plist` files. This version is maintained for compatibility with older systems but the JSON version is recommended for new deployments.
+
+#### Features
+- Reads AppleCare warranty data from local plist files
+- Automatically updates warranty expiration dates in Jamf Pro
+- Uses Jamf Pro API for secure data updates
+- Processes epoch timestamp format
+
+#### Prerequisites
+- macOS device signed in with an Apple ID
+- Jamf Pro enrollment
+- Device must have warranty coverage information available
+- Jamf Pro API credentials with appropriate permissions
+
+#### Usage
+
+1. **Configure Script Variables:**
+   - Edit the script to set `JAMF_URL`, `client_id`, and `client_secret`
+   - Or modify to use Jamf Pro script parameters
+
+2. **Deploy via Jamf Pro:**
+   - Upload the script to Jamf Pro
+   - Deploy to target devices
+
+#### How It Works
+
+1. Authenticates with Jamf Pro using OAuth credentials
+2. Retrieves the device's serial number
+3. Locates AppleCare warranty plist files in the user's Library
+4. Parses warranty expiration information from plist format
+5. Updates the warranty date in Jamf Pro's computer inventory
+
+#### File Locations
+
+The script reads warranty data from:
+```
+/Users/{username}/Library/Application Support/com.apple.NewDeviceOutreach/
+```
+
+#### Dependencies
+
+- `curl` (built-in)
+- `PlistBuddy` (built-in)
+- `defaults` (built-in)
+- `system_profiler` (built-in)
+- `xmllint` (built-in)
+
+---
+
+## Script Evolution
+
+| Version | File Format | Date Format | Recommended Use |
+|---------|-------------|-------------|-----------------|
+| 2.0 | JSON | Human-readable | **Current - New deployments** |
+| 1.0 | PLIST | Epoch timestamp | Legacy compatibility |
+
+### Key Differences
+
+- **File Format**: Version 1.0 uses `.plist` files, Version 2.0 uses `.json` files
+- **Date Parsing**: Version 1.0 processes epoch timestamps, Version 2.0 handles human-readable dates
+- **Error Handling**: Version 2.0 includes enhanced error handling and debugging
+- **Flexibility**: Version 2.0 supports multiple date formats and parsing methods
 
 ## Installation
 
@@ -125,9 +198,9 @@ For support and questions:
 ## Version History
 
 ### AppleCare Warranty Checker
-- **v2.0** (2025-08-21): Updated for new Apple JSON format, improved error handling
-- **v1.0** (2024-12-30): Initial release with XML parsing
+- **v2.0** (2025-08-21): Updated for new Apple JSON format, improved error handling, enhanced date parsing
+- **v1.0** (2024-12-31): Initial release with PLIST parsing and epoch timestamp support
 
 ---
 
-**Note:** This repository is actively maintained and updated to support the latest macOS versions and Jamf Pro features.
+**Note:** This repository is actively maintained and updated to support the latest macOS versions and Jamf Pro features. The JSON version (v2.0) is recommended for all new deployments.
