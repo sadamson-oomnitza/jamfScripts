@@ -34,6 +34,8 @@ This is a quick overview of taking the updated information in Jamf and enhancing
 2. Run (or on next integration sync) Oomnitza will find updated warranty date information
 3. Create dashboard and/or reports in Oomnitza to target devices that may be coming out of warranty
 
+## Overall Script Flow
+
 ### Authentication Flow
 ```bash
 # OAuth 2.0 authentication with Jamf Pro
