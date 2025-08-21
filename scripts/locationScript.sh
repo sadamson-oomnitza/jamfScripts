@@ -39,9 +39,105 @@ else
     USE_JQ=true
 fi
 
-# Function to get external IP address
+# Function to detect VPN, DNS, and networking services
+detect_network_services() {
+    local vpn_detected=false
+    local nextdns_detected=false
+    local tailscale_detected=false
+    local network_info=""
+    
+    log_message "Detecting network services and VPN connections"
+    
+    # Check for VPN connections
+    if pgrep -f "openvpn\|vpn\|tunnel" >/dev/null 2>&1; then
+        vpn_detected=true
+        network_info="$network_info VPN"
+        log_message "VPN process detected"
+    fi
+    
+    # Check for Tailscale
+    if command -v tailscale >/dev/null 2>&1; then
+        if tailscale status >/dev/null 2>&1; then
+            tailscale_detected=true
+            network_info="$network_info Tailscale"
+            log_message "Tailscale detected and active"
+        fi
+    fi
+    
+    # Check for NextDNS
+    if [[ -f "/etc/resolv.conf" ]]; then
+        if grep -q "nextdns" /etc/resolv.conf 2>/dev/null; then
+            nextdns_detected=true
+            network_info="$network_info NextDNS"
+            log_message "NextDNS detected in resolv.conf"
+        fi
+    fi
+    
+    # Check for common VPN interfaces
+    local vpn_interfaces=("tun0" "tun1" "utun0" "utun1" "ppp0" "ppp1")
+    for interface in "${vpn_interfaces[@]}"; do
+        if ifconfig "$interface" >/dev/null 2>&1; then
+            vpn_detected=true
+            network_info="$network_info Interface:$interface"
+            log_message "VPN interface detected: $interface"
+        fi
+    done
+    
+    # Check for VPN-related system preferences
+    if [[ -f "/Library/Preferences/com.apple.networkextension.plist" ]]; then
+        if plutil -p "/Library/Preferences/com.apple.networkextension.plist" 2>/dev/null | grep -q "VPN"; then
+            vpn_detected=true
+            network_info="$network_info SystemVPN"
+            log_message "System VPN configuration detected"
+        fi
+    fi
+    
+    # Check for common VPN apps
+    local vpn_apps=(
+        "/Applications/Cisco AnyConnect Secure Mobility Client.app"
+        "/Applications/GlobalProtect.app"
+        "/Applications/OpenVPN Connect.app"
+        "/Applications/Shimo.app"
+        "/Applications/Tunnelblick.app"
+        "/Applications/Viscosity.app"
+        "/Applications/ExpressVPN.app"
+        "/Applications/NordVPN.app"
+    )
+    
+    for app in "${vpn_apps[@]}"; do
+        if [[ -d "$app" ]]; then
+            vpn_detected=true
+            network_info="$network_info App:$(basename "$app" .app)"
+            log_message "VPN application detected: $app"
+        fi
+    done
+    
+    echo "$vpn_detected:$nextdns_detected:$tailscale_detected:$network_info"
+}
+
+# Function to get external IP address with VPN/DNS awareness
 get_external_ip() {
     local ip=""
+    local network_services
+    local vpn_detected
+    local nextdns_detected
+    local tailscale_detected
+    local network_info
+    
+    # Detect network services
+    network_services=$(detect_network_services)
+    IFS=':' read -r vpn_detected nextdns_detected tailscale_detected network_info <<< "$network_services"
+    
+    # Log network service detection
+    if [[ "$vpn_detected" == "true" ]]; then
+        log_message "WARNING: VPN detected - location may not reflect physical location"
+    fi
+    if [[ "$nextdns_detected" == "true" ]]; then
+        log_message "INFO: NextDNS detected - may affect IP geolocation"
+    fi
+    if [[ "$tailscale_detected" == "true" ]]; then
+        log_message "INFO: Tailscale detected - may affect network routing"
+    fi
     
     # Try multiple IP services for redundancy
     local ip_services=(
@@ -49,6 +145,8 @@ get_external_ip() {
         "https://ifconfig.me/ip"
         "https://icanhazip.com"
         "https://ipecho.net/plain"
+        "https://checkip.amazonaws.com"
+        "https://ip.42.pl/raw"
     )
     
     for service in "${ip_services[@]}"; do
@@ -56,7 +154,13 @@ get_external_ip() {
         if ip=$(curl -s --max-time 10 --connect-timeout 5 "$service" 2>/dev/null | tr -d '\n\r'); then
             if [[ "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
                 log_message "Successfully retrieved IP: $ip from $service"
-                echo "$ip"
+                
+                # Add network service context to the output
+                if [[ "$vpn_detected" == "true" || "$nextdns_detected" == "true" || "$tailscale_detected" == "true" ]]; then
+                    echo "$ip:$network_info"
+                else
+                    echo "$ip:"
+                fi
                 return 0
             else
                 log_message "Invalid IP format received from $service: $ip"
@@ -135,6 +239,7 @@ format_jamf_output() {
     local state="$2"
     local country="$3"
     local org="$4"
+    local network_info="$5"
     
     # Format: City, State, Country
     local location_string="$city, $state, $country"
@@ -152,6 +257,19 @@ format_jamf_output() {
         location_string="Location Unknown"
     fi
     
+    # Add network service indicators if detected
+    if [[ -n "$network_info" ]]; then
+        if echo "$network_info" | grep -q "VPN"; then
+            location_string="$location_string [VPN]"
+        fi
+        if echo "$network_info" | grep -q "NextDNS"; then
+            location_string="$location_string [NextDNS]"
+        fi
+        if echo "$network_info" | grep -q "Tailscale"; then
+            location_string="$location_string [Tailscale]"
+        fi
+    fi
+    
     echo "<result>$location_string</result>"
 }
 
@@ -159,10 +277,18 @@ format_jamf_output() {
 main() {
     log_message "Starting location script execution"
     
-    # Get external IP
+    # Get external IP with network service detection
+    local external_ip_data
     local external_ip
-    external_ip=$(get_external_ip)
+    local network_info
+    
+    external_ip_data=$(get_external_ip)
+    IFS=':' read -r external_ip network_info <<< "$external_ip_data"
+    
     log_message "External IP: $external_ip"
+    if [[ -n "$network_info" ]]; then
+        log_message "Network services detected: $network_info"
+    fi
     
     # Get location information
     local location_data
@@ -189,7 +315,7 @@ main() {
     
     # Format output for Jamf Pro
     local jamf_output
-    jamf_output=$(format_jamf_output "$city" "$state" "$country" "$org")
+    jamf_output=$(format_jamf_output "$city" "$state" "$country" "$org" "$network_info")
     
     # Output the result
     echo "$jamf_output"
@@ -197,6 +323,9 @@ main() {
     # Also output detailed information for debugging
     echo "<details>"
     echo "IP: $external_ip"
+    if [[ -n "$network_info" ]]; then
+        echo "Network Services: $network_info"
+    fi
     echo "City: $city"
     echo "State: $state"
     echo "Country: $country"

@@ -29,6 +29,8 @@ This script serves several important functions in enterprise macOS management:
 - **Detailed Logging**: Comprehensive logging for troubleshooting
 - **Network Timeouts**: Configurable timeouts for network requests
 - **Data Validation**: Validates IP addresses and location data
+- **VPN/DNS Detection**: Automatically detects VPN, NextDNS, and Tailscale usage
+- **Network Service Indicators**: Adds service indicators to location output
 
 ## Technical Implementation
 
@@ -42,14 +44,35 @@ local ip_services=(
     "https://ifconfig.me/ip"
     "https://icanhazip.com"
     "https://ipecho.net/plain"
+    "https://checkip.amazonaws.com"
+    "https://ip.42.pl/raw"
 )
 ```
 
 **Process:**
-1. Attempts each service in sequence
-2. Validates IP format using regex
-3. Returns first valid IP address
-4. Logs failures for troubleshooting
+1. Detects VPN, NextDNS, and Tailscale usage
+2. Attempts each service in sequence
+3. Validates IP format using regex
+4. Returns first valid IP address with network service context
+5. Logs failures for troubleshooting
+
+### Network Service Detection
+
+The script automatically detects various network services that may affect location accuracy:
+
+#### VPN Detection
+- **Process Detection**: Checks for VPN-related processes
+- **Interface Detection**: Identifies VPN interfaces (tun0, utun0, etc.)
+- **System Preferences**: Checks macOS VPN configurations
+- **Application Detection**: Detects common VPN applications
+
+#### NextDNS Detection
+- **DNS Configuration**: Checks `/etc/resolv.conf` for NextDNS entries
+- **Service Impact**: Logs potential geolocation impact
+
+#### Tailscale Detection
+- **Service Status**: Checks if Tailscale is installed and active
+- **Network Routing**: Logs potential routing impact
 
 ### Geolocation Service
 
@@ -100,9 +123,10 @@ chmod +x locationScript.sh
 
 #### Jamf Pro Format
 ```xml
-<result>San Francisco, CA, US</result>
+<result>San Francisco, CA, US [VPN]</result>
 <details>
 IP: 192.168.1.100
+Network Services: VPN App:ExpressVPN
 City: San Francisco
 State: CA
 Country: US
@@ -111,8 +135,9 @@ Organization: Comcast Cable Communications
 ```
 
 #### Alternative Outputs
-- `New York, NY, US` (Full location available)
-- `Comcast Cable Communications` (Location unknown, org available)
+- `New York, NY, US [NextDNS]` (Location with NextDNS detected)
+- `Amsterdam, NL [Tailscale]` (Location with Tailscale detected)
+- `Comcast Cable Communications [VPN]` (Location unknown, org available)
 - `Location Unknown` (No data available)
 
 ## Dependencies
@@ -196,6 +221,20 @@ Operator: does not contain
 Value: US
 ```
 
+#### Devices Using VPN
+```
+Extension Attribute: location
+Operator: contains
+Value: [VPN]
+```
+
+#### Devices Using NextDNS
+```
+Extension Attribute: location
+Operator: contains
+Value: [NextDNS]
+```
+
 #### Remote Workers
 ```
 Extension Attribute: location
@@ -206,6 +245,7 @@ Value: [Office City]
 ### Policy Integration
 - **Location-Based Policies**: Trigger actions based on device location
 - **Security Policies**: Restrict access based on location
+- **VPN Detection Policies**: Monitor VPN usage for security compliance
 - **Support Policies**: Route support requests by location
 
 ## Troubleshooting
@@ -281,7 +321,9 @@ grep "completed successfully" /var/log/locationScript.log
 - **Firewall Issues**: May be blocked by corporate firewalls
 
 ### Data Accuracy
-- **VPN Impact**: VPN usage affects location accuracy
+- **VPN Impact**: VPN usage affects location accuracy (now detected and indicated)
+- **NextDNS Impact**: NextDNS may affect geolocation accuracy (now detected and indicated)
+- **Tailscale Impact**: Tailscale routing may affect network location (now detected and indicated)
 - **Mobile Networks**: Mobile IPs may show carrier location
 - **Corporate Networks**: Corporate IPs may show company location
 
