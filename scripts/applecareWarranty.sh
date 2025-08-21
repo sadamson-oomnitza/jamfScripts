@@ -18,6 +18,7 @@
 # NOTE: THIS SCRIPT IS PROVIDED AS IS WITHOUT WARRANTY OF ANY KIND. USE IT AT YOUR OWN RISK.
 ####################################
 
+# Use variables in Jamf Pro to pass the credentials and URL
 # Jamf Pro credentials and URL
 JAMF_URL="$4"
 client_id="$5"
