@@ -7,6 +7,7 @@
 # Last Modified Date: 08-21-25
 # Tested on macOS Version: macOS Ventura - Sequoia
 # Updated for new Apple file type (json)
+# Updated by Scott Adamson (Oomnitza Inc)
 # Contact HCS: info@hcsonline.com
 # Visit HCS: https://hcsonline.com
 ####################################
