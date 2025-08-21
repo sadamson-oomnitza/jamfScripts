@@ -6,6 +6,7 @@
 # Creation Date: 12-30-24
 # Last Modified Date: 08-21-25
 # Tested on macOS Version: macOS Ventura - Sequoia
+# Tested on Jamf Pro 11.19.1 and up to macOS 15.6.1
 # Updated for new Apple file type (json)
 # Updated by Scott Adamson (Oomnitza Inc)
 # Updated with the help of Claude
