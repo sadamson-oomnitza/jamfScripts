@@ -10,6 +10,7 @@
 # Updated for new Apple file type (json)
 # Updated by Scott Adamson (Oomnitza Inc)
 # Updated with the help of Claude
+# Visit Oomnitza: https://oomnitza.com
 # Contact HCS: info@hcsonline.com
 # Visit HCS: https://hcsonline.com
 ####################################
