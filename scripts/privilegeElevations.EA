@@ -1,0 +1,72 @@
+#!/bin/bash
+# Extension Attribute: Recent Privilege Elevations
+# Data Type: String
+# Input Type: Script
+
+# Set time range (last 24 hours)
+start_time=$(date -v-24H '+%Y-%m-%d %H:%M:%S')
+
+# Look for privilege escalation events from multiple sources
+# 1. System authorization events (most reliable)
+auth_events=$(timeout 30 log show \
+    --predicate 'process == "authd" AND eventMessage CONTAINS "authenticated"' \
+    --start "$start_time" \
+    --style compact \
+    2>/dev/null | grep -E "(admin|sudo|privilege)" | tail -10)
+
+# 2. Sudo events
+sudo_events=$(timeout 30 log show \
+    --predicate 'process == "sudo"' \
+    --start "$start_time" \
+    --style compact \
+    2>/dev/null | tail -10)
+
+# 3. Any Jamf-related privilege events (broader search)
+jamf_privilege=$(timeout 30 log show \
+    --predicate '(process CONTAINS "jamf" OR process CONTAINS "Jamf") AND (eventMessage CONTAINS "privilege" OR eventMessage CONTAINS "admin" OR eventMessage CONTAINS "elevated")' \
+    --start "$start_time" \
+    --style compact \
+    2>/dev/null | tail -5)
+
+# 4. Security framework events (catches privilege escalations)
+security_events=$(timeout 30 log show \
+    --predicate 'subsystem == "com.apple.security" AND eventMessage CONTAINS "authorization"' \
+    --start "$start_time" \
+    --style compact \
+    2>/dev/null | grep -iE "(granted|denied|privilege)" | tail -5)
+
+# Combine and format results
+all_events=""
+
+if [[ -n "$auth_events" ]]; then
+    formatted_auth=$(echo "$auth_events" | sed 's/^/[AUTH] /' | tr '\n' ' | ')
+    all_events+="$formatted_auth"
+fi
+
+if [[ -n "$sudo_events" ]]; then
+    formatted_sudo=$(echo "$sudo_events" | sed 's/^/[SUDO] /' | tr '\n' ' | ')
+    all_events+="$formatted_sudo"
+fi
+
+if [[ -n "$jamf_privilege" ]]; then
+    formatted_jamf=$(echo "$jamf_privilege" | sed 's/^/[JAMF] /' | tr '\n' ' | ')
+    all_events+="$formatted_jamf"
+fi
+
+if [[ -n "$security_events" ]]; then
+    formatted_security=$(echo "$security_events" | sed 's/^/[SEC] /' | tr '\n' ' | ')
+    all_events+="$formatted_security"
+fi
+
+# Output results
+if [[ -n "$all_events" ]]; then
+    # Count total events
+    event_count=$(echo "$all_events" | grep -o '\[' | wc -l | tr -d ' ')
+    
+    # Limit output length and clean up
+    clean_events=$(echo "$all_events" | sed 's/ | $//' | cut -c1-1800)
+    
+    echo "<r>[$event_count privilege events] $clean_events</r>"
+else
+    echo "<r>No privilege elevation events detected in last 24 hours</r>"
+fi
