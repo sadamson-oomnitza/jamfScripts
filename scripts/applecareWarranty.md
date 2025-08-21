@@ -29,6 +29,11 @@ This is a quick overview of taking the updated information in Jamf and enhancing
 
 ## Technical Implementation
 
+### Oomnitza Integration Suggestions
+1. Within the Jamf Pro integration on Oomnitza validate or update mapping for date value
+2. Run (or on next integration sync) Oomnitza will find updated warranty date information
+3. Create dashboard and/or reports in Oomnitza to target devices that may be coming out of warranty
+
 ### Authentication Flow
 ```bash
 # OAuth 2.0 authentication with Jamf Pro
@@ -47,6 +52,8 @@ The script identifies the target device using:
 3. **User Context**: Determines the currently logged-in user for file path construction
 
 ### Data Source Location
+This seems to have been updated by Apple from a plist file to a json file and an updated path for the latest data from Apple
+The file is generated on the macOS when a device checks in/or device information is requested from Apple.  The file is then created or updated in the folder (serialnumber.json)
 ```bash
 JSON_DIR="/Users/$loggedInUser/Library/Application Support/com.apple.NewDeviceOutreach/caches/coverageDetails"
 ```
