@@ -150,9 +150,9 @@ response=$(curl -X 'PATCH' \
 - `plutil` (built-in)
 
 ### Oomnitza Requirements
-Access to an Oomnitza instance
-Ability to add or update the Asset integrations in Oomnitza
-Confirm the Oomnitza integration is leveraging the latest credentials for Jamf Pro
+- Access to an Oomnitza instance
+- Ability to add or update the Asset integrations in Oomnitza
+- Confirm the Oomnitza integration is leveraging the latest credentials for Jamf Pro
 
 ### Jamf Pro Configuration
 - API client with appropriate permissions
