@@ -490,14 +490,14 @@ fi
 # IT Support Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-supportTeamName="IT Support"
-supportTeamPhone="+1 (801) 555-1212"
-supportTeamEmail="rescue@domain.org"
-supportTeamWebsite="https://support.domain.org"
+supportTeamName="Oomnitza Support"
+supportTeamPhone="+1 267-493-9701"
+supportTeamEmail="techdesk@oomnitza.com"
+supportTeamWebsite="https://oomdesk.zendesk.com/"
 supportTeamHyperlink="[${supportTeamWebsite}](${supportTeamWebsite})"
-supportKB="KB8675309"
-infobuttonaction="https://servicenow.domain.org/support?id=kb_article_view&sysparm_article=${supportKB}"
-supportKBURL="[${supportKB}](${infobuttonaction})"
+# supportKB="KB8675309"
+#infobuttonaction="https://servicenow.domain.org/support?id=kb_article_view&sysparm_article=${supportKB}"
+#supportKBURL="[${supportKB}](${infobuttonaction})"
 
 
 
