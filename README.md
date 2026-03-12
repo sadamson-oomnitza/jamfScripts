@@ -1,206 +1,190 @@
 # jamfScripts
 
-A collection of utility scripts designed to enhance Jamf Pro and Oomnitza integration capabilities for macOS device management.
+A collection of utility scripts for Jamf Pro and Oomnitza integration — focused on automating macOS device management tasks in enterprise environments.
+
+> ⚠️ **Disclaimer:** These scripts are provided as-is without warranty of any kind. Always test in a non-production environment before deploying to production systems. Use at your own risk.
+
+---
 
 ## Overview
 
-This repository contains scripts that extend the functionality of Jamf Pro by providing additional automation and data collection capabilities. These scripts are particularly useful for organizations managing macOS devices in enterprise environments.
+These scripts extend Jamf Pro's functionality with additional automation and data collection capabilities, particularly useful for organizations managing macOS devices at scale.
+
+---
 
 ## Scripts
 
-### AppleCare Warranty Checker - JSON Version (`applecareWarranty.sh`)
+### AppleCare Warranty Checker — JSON Version (`applecareWarranty.sh`)
 
-**Version:** 2.0  
-**Last Updated:** August 21, 2025  
-**Compatibility:** macOS Ventura - Sequoia  
+**Version:** 2.0
+**Last Updated:** August 21, 2025
+**Compatibility:** macOS Ventura – Sequoia
+**Status:** ✅ Recommended for all new deployments
 
-Automatically retrieves and updates AppleCare warranty information in Jamf Pro by reading warranty data from Apple's local JSON cache files. This is the **recommended version** for current macOS systems.
+Automatically retrieves AppleCare warranty information from Apple's local JSON cache and updates the device record in Jamf Pro.
 
 #### Features
+
 - Reads AppleCare warranty data from local JSON cache files
-- Automatically updates warranty expiration dates in Jamf Pro
+- Updates warranty expiration dates in Jamf Pro via API
 - Supports multiple date formats (US and International)
-- Uses Jamf Pro API for secure data updates
-- Includes fallback parsing methods (jq and Python3)
-- Enhanced error handling and debugging output
+- Includes fallback parsing via `jq` or `python3`
+- Enhanced error handling and debug output
 
 #### Prerequisites
+
 - macOS device signed in with an Apple ID
-- Jamf Pro enrollment
-- Device must have warranty coverage information available
-- Jamf Pro API credentials with appropriate permissions
+- Enrolled in Jamf Pro
+- AppleCare coverage information present on the device
+- Jamf Pro API client with `Read Computers` and `Update Computers` permissions
 
-#### Usage
+#### Jamf Pro Script Parameters
 
-1. **Configure Jamf Pro Script Parameters:**
-   - Parameter 4: Jamf Pro URL (e.g., `https://your-jamf-server.com`)
-   - Parameter 5: Client ID
-   - Parameter 6: Client Secret
-
-2. **Deploy via Jamf Pro:**
-   - Upload the script to Jamf Pro
-   - Configure the required parameters
-   - Deploy to target devices
+| Parameter | Value |
+|-----------|-------|
+| 4 | Jamf Pro URL (e.g., `https://your-instance.jamfcloud.com`) |
+| 5 | API Client ID |
+| 6 | API Client Secret |
 
 #### How It Works
 
-1. Authenticates with Jamf Pro using OAuth credentials
-2. Retrieves the device's serial number
-3. Locates AppleCare warranty JSON files in the user's Library
-4. Parses warranty expiration information
-5. Updates the warranty date in Jamf Pro's computer inventory
+1. Authenticates with Jamf Pro using OAuth (client credentials)
+2. Retrieves the device serial number via `system_profiler`
+3. Locates AppleCare warranty JSON files in the logged-in user's Library
+4. Parses the warranty expiration date
+5. Updates the computer inventory record in Jamf Pro
 
-#### File Locations
+#### Warranty Cache File Location
 
-The script reads warranty data from:
 ```
 /Users/{username}/Library/Application Support/com.apple.NewDeviceOutreach/caches/coverageDetails/
 ```
 
 #### Dependencies
 
-- `curl` (built-in)
-- `jq` (preferred) or `python3` (fallback)
-- `system_profiler` (built-in)
-- `xmllint` (built-in)
+| Tool | Source |
+|------|--------|
+| `curl` | Built-in |
+| `jq` | Preferred parser (install via Homebrew) |
+| `python3` | Fallback parser (built-in on macOS) |
+| `system_profiler` | Built-in |
+| `xmllint` | Built-in |
 
 ---
 
-### AppleCare Warranty Checker - Legacy PLIST Version (`getAppleCareWarrantyInfo.sh`)
+### AppleCare Warranty Checker — Legacy PLIST Version (`getAppleCareWarrantyInfo.sh`)
 
-**Version:** 1.0  
-**Last Updated:** December 31, 2024  
-**Compatibility:** macOS Ventura - Sequoia  
-**Status:** Legacy - Use JSON version for new deployments
+**Version:** 1.0
+**Last Updated:** December 31, 2024
+**Compatibility:** macOS Ventura – Sequoia
+**Status:** 🔶 Legacy — maintained for compatibility only
 
-Legacy version that reads AppleCare warranty information from `.plist` files. This version is maintained for compatibility with older systems but the JSON version is recommended for new deployments.
+Reads AppleCare warranty information from `.plist` files and updates Jamf Pro. Use the JSON version (v2.0) for new deployments.
 
 #### Features
-- Reads AppleCare warranty data from local plist files
-- Automatically updates warranty expiration dates in Jamf Pro
-- Uses Jamf Pro API for secure data updates
+
+- Reads warranty data from local plist files
+- Updates warranty expiration dates in Jamf Pro via API
 - Processes epoch timestamp format
 
 #### Prerequisites
+
 - macOS device signed in with an Apple ID
-- Jamf Pro enrollment
-- Device must have warranty coverage information available
-- Jamf Pro API credentials with appropriate permissions
+- Enrolled in Jamf Pro
+- AppleCare coverage information present on the device
+- Jamf Pro API client with `Read Computers` and `Update Computers` permissions
 
-#### Usage
+#### Configuration
 
-1. **Configure Script Variables:**
-   - Edit the script to set `JAMF_URL`, `client_id`, and `client_secret`
-   - Or modify to use Jamf Pro script parameters
+Edit the following variables directly in the script before deploying:
 
-2. **Deploy via Jamf Pro:**
-   - Upload the script to Jamf Pro
-   - Deploy to target devices
+```bash
+JAMF_URL="https://your-instance.jamfcloud.com"
+client_id="your-client-id"
+client_secret="your-client-secret"
+```
 
-#### How It Works
+> 💡 Tip: Consider migrating these to Jamf Pro script parameters (Parameters 4–6) to match the v2.0 approach and avoid storing credentials in the script body.
 
-1. Authenticates with Jamf Pro using OAuth credentials
-2. Retrieves the device's serial number
-3. Locates AppleCare warranty plist files in the user's Library
-4. Parses warranty expiration information from plist format
-5. Updates the warranty date in Jamf Pro's computer inventory
+#### Warranty Cache File Location
 
-#### File Locations
-
-The script reads warranty data from:
 ```
 /Users/{username}/Library/Application Support/com.apple.NewDeviceOutreach/
 ```
 
 #### Dependencies
 
-- `curl` (built-in)
-- `PlistBuddy` (built-in)
-- `defaults` (built-in)
-- `system_profiler` (built-in)
-- `xmllint` (built-in)
+| Tool | Source |
+|------|--------|
+| `curl` | Built-in |
+| `PlistBuddy` | Built-in |
+| `defaults` | Built-in |
+| `system_profiler` | Built-in |
+| `xmllint` | Built-in |
 
 ---
 
-## Script Evolution
+## Version Comparison
 
-| Version | File Format | Date Format | Recommended Use |
-|---------|-------------|-------------|-----------------|
-| 2.0 | JSON | Human-readable | **Current - New deployments** |
-| 1.0 | PLIST | Epoch timestamp | Legacy compatibility |
+| | v1.0 (Legacy) | v2.0 (Current) |
+|---|---|---|
+| **File format** | `.plist` | `.json` |
+| **Date format** | Epoch timestamp | Human-readable |
+| **Credentials** | Hardcoded in script | Jamf script parameters |
+| **Error handling** | Basic | Enhanced with debug output |
+| **Recommended** | Legacy only | ✅ Yes |
 
-### Key Differences
-
-- **File Format**: Version 1.0 uses `.plist` files, Version 2.0 uses `.json` files
-- **Date Parsing**: Version 1.0 processes epoch timestamps, Version 2.0 handles human-readable dates
-- **Error Handling**: Version 2.0 includes enhanced error handling and debugging
-- **Flexibility**: Version 2.0 supports multiple date formats and parsing methods
+---
 
 ## Installation
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/your-username/jamfScripts.git
-   cd jamfScripts
-   ```
-
-2. Review and customize scripts as needed for your environment
-
-3. Upload scripts to your Jamf Pro instance
-
-## Configuration
-
-### Jamf Pro API Setup
-
-1. Create an API client in Jamf Pro:
-   - Navigate to **Settings** > **System Settings** > **Jamf Pro User Accounts & Groups**
-   - Create a new API client with appropriate permissions
-
-2. Configure script parameters in Jamf Pro:
-   - Set the required parameters (URL, Client ID, Client Secret)
-   - Ensure the API client has permissions to read and update computer inventory
-
-### Script Permissions
-
-Ensure scripts have appropriate execution permissions:
 ```bash
+git clone https://github.com/your-username/jamfScripts.git
+cd jamfScripts
 chmod +x scripts/*.sh
 ```
+
+---
+
+## Jamf Pro API Setup
+
+1. In Jamf Pro, navigate to **Settings > System > API Roles and Clients**
+2. Create a new **API Role** with the following privileges:
+   - `Read Computers`
+   - `Update Computers`
+3. Create a new **API Client** assigned to that role
+4. Copy the **Client ID** and generate a **Client Secret**
+5. Configure these as script parameters (Parameters 4–6) when deploying `applecareWarranty.sh`
+
+> 🔒 Never hardcode credentials in scripts that will be stored in Jamf Pro or version control.
+
+---
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For support and questions:
-- **HCS Technology Group:** info@hcsonline.com
-- **Website:** https://hcsonline.com
-
-## Acknowledgments
-
-- **Original Author:** HCS Technology Group
-- **Contributors:** Scott Adamson (Oomnitza Inc)
-- **AI Assistance:** Claude
-
-## Disclaimer
-
-⚠️ **IMPORTANT:** These scripts are provided as-is without warranty of any kind. Use them at your own risk. Always test scripts in a non-production environment before deploying to production systems.
-
-## Version History
-
-### AppleCare Warranty Checker
-- **v2.0** (2025-08-21): Updated for new Apple JSON format, improved error handling, enhanced date parsing
-- **v1.0** (2024-12-31): Initial release with PLIST parsing and epoch timestamp support
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Commit your changes: `git commit -m 'Description of change'`
+4. Push and open a Pull Request
 
 ---
 
-**Note:** This repository is actively maintained and updated to support the latest macOS versions and Jamf Pro features. The JSON version (v2.0) is recommended for all new deployments.
+## Version History
+
+| Version | Date | Notes |
+|---------|------|-------|
+| v2.0 | 2025-08-21 | JSON format, improved error handling, Jamf script parameters |
+| v1.0 | 2024-12-31 | Initial release, PLIST format, epoch timestamp |
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgments
+
+- Original concept: [HCS Technology Group](https://hcsonline.com)
+- Contributor: Scott Adamson, Oomnitza Inc.
