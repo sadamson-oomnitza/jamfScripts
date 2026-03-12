@@ -7,23 +7,25 @@
 # Jamf Pro Compatible: Yes
 
 # Function to get hardware details
+# Uses exact leading-whitespace match to avoid partial field name collisions
+# e.g. prevents "Model Identifier" from matching "Model Name"
 get_hardware_detail() {
-    system_profiler SPHardwareDataType | awk -F": " "/$1/{print \$2}" | tr -d ' '
+    system_profiler SPHardwareDataType | awk -F": " "/^      $1:/{print \$2}" | xargs
 }
 
 # Get hardware info
-serialNumber=$(get_hardware_detail "Serial Number")
-deviceType=$(get_hardware_detail "Model Identifier")
+serialNumber=$(get_hardware_detail "Serial Number" | tr -d ' ')
+deviceType=$(get_hardware_detail "Model Identifier" | tr -d ' ')
 
-# Get chip type with fallback for Intel Macs
+# Get chip type - keep spaces intact for normalization step below
 chipType=$(get_hardware_detail "Chip")
 if [ -z "$chipType" ]; then
     chipType=$(get_hardware_detail "Processor Name")
     [ -z "$chipType" ] && chipType="Intel"
 fi
 
-# Normalize chip type for cleaner naming
-chipType=$(echo "$chipType" | sed 's/AppleM/M/; s/IntelCore/Intel/')
+# Normalize chip type: "Apple M5" -> "M5", "Intel Core i7" -> "Inteli7"
+chipType=$(echo "$chipType" | sed 's/Apple //' | tr -d ' ' | sed 's/IntelCore/Intel/')
 
 # Determine short device type
 # Generic friendly names from system_profiler come first
