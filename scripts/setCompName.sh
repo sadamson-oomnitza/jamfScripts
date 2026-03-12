@@ -60,15 +60,30 @@ safeLocalHostName=$(echo "$computerName" | tr -cd 'A-Za-z0-9-' | sed 's/^-*//')
 
 # Set up logging early so errors are also captured
 logFile="/var/log/computerNameScript.log"
+
+# Log existing name before making changes
+oldComputerName=$(scutil --get ComputerName 2>/dev/null || echo "not set")
+oldHostName=$(scutil --get HostName 2>/dev/null || echo "not set")
+oldLocalHostName=$(scutil --get LocalHostName 2>/dev/null || echo "not set")
+echo "$(date): Current name  - ComputerName: $oldComputerName | HostName: $oldHostName | LocalHostName: $oldLocalHostName" | tee -a "$logFile"
 echo "$(date): Attempting to set computer name to: $computerName" | tee -a "$logFile"
+
+# Clear existing names before applying new ones
+scutil --set ComputerName "" 2>/dev/null
+scutil --set HostName "" 2>/dev/null
+scutil --set LocalHostName "" 2>/dev/null
 
 # Apply names and log result
 if scutil --set ComputerName "$computerName" && \
    scutil --set HostName "$computerName" && \
    scutil --set LocalHostName "$safeLocalHostName"; then
-    echo "$(date): SUCCESS - Computer name set to $computerName" | tee -a "$logFile"
+    echo "$(date): SUCCESS - Computer name updated: [$oldComputerName] -> [$computerName]" | tee -a "$logFile"
 else
-    echo "$(date): ERROR - Failed to set computer name" | tee -a "$logFile"
+    echo "$(date): ERROR - Failed to set computer name. Restoring previous name." | tee -a "$logFile"
+    # Attempt to restore old names on failure
+    scutil --set ComputerName "$oldComputerName" 2>/dev/null
+    scutil --set HostName "$oldHostName" 2>/dev/null
+    scutil --set LocalHostName "$oldLocalHostName" 2>/dev/null
     exit 1
 fi
 
@@ -76,6 +91,7 @@ fi
 jamf_cmd="/usr/local/bin/jamf"
 if [[ -x "$jamf_cmd" ]]; then
     "$jamf_cmd" setComputerName -name "$computerName"
+    "$jamf_cmd" recon
     echo "$(date): Jamf inventory updated with name $computerName" | tee -a "$logFile"
 else
     echo "$(date): WARNING - Jamf binary not found. Skipping inventory update." | tee -a "$logFile"
