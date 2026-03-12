@@ -6,54 +6,75 @@
 # Last Updated: 2026-03
 # Jamf Pro Compatible: Yes
 
-# Function to get hardware details
-# Uses exact leading-whitespace match to avoid partial field name collisions
-# e.g. prevents "Model Identifier" from matching "Model Name"
+# Cache system_profiler output once to avoid multiple slow calls
+hwInfo=$(system_profiler SPHardwareDataType 2>/dev/null)
+
+# Function to extract an exact field value from cached hardware info
+# Uses grep with word-boundary logic to prevent "Model Identifier" matching "Model Name"
 get_hardware_detail() {
-    system_profiler SPHardwareDataType | awk -F": " "/^      $1:/{print \$2}" | xargs
+    echo "$hwInfo" | grep -m1 "^[[:space:]]*${1}:" | awk -F': ' '{print $2}' | xargs
 }
 
 # Get hardware info
-serialNumber=$(get_hardware_detail "Serial Number" | tr -d ' ')
+serialNumber=$(get_hardware_detail "Serial Number (system)" | tr -d ' ')
+# Fallback for older macOS where field was just "Serial Number"
+[ -z "$serialNumber" ] && serialNumber=$(get_hardware_detail "Serial Number" | tr -d ' ')
+
+modelName=$(get_hardware_detail "Model Name")
 deviceType=$(get_hardware_detail "Model Identifier" | tr -d ' ')
 
-# Get chip type - keep spaces intact for normalization step below
+# Get chip type - preserve spaces for clean normalization below
 chipType=$(get_hardware_detail "Chip")
 if [ -z "$chipType" ]; then
     chipType=$(get_hardware_detail "Processor Name")
     [ -z "$chipType" ] && chipType="Intel"
 fi
 
-# Normalize chip type: "Apple M5" -> "M5", "Intel Core i7" -> "Inteli7"
-chipType=$(echo "$chipType" | sed 's/Apple //' | tr -d ' ' | sed 's/IntelCore/Intel/')
+# Normalize chip type:
+#   "Apple M5"       -> "M5"
+#   "Apple M4 Pro"   -> "M4Pro"
+#   "Intel Core i7"  -> "Inteli7"
+chipType=$(echo "$chipType" | sed 's/^Apple //' | tr -d ' ' | sed 's/^IntelCore/Intel/')
 
 # Determine short device type
-# Generic friendly names from system_profiler come first
-case "$deviceType" in
-    *"MacBookAir"*)  deviceType="MBA" ;;
-    *"MacBookPro"*)  deviceType="MBP" ;;
-    *"iMac"*)        deviceType="iMac" ;;
-    *"Macmini"*)     deviceType="Mini" ;;
-    *"MacStudio"*)   deviceType="MacStudio" ;;
-    *"MacPro"*)      deviceType="MacPro" ;;
-    # Fallback: raw Model Identifiers (edge cases / future models)
-    # iMac
-    *"Mac21,1"|*"Mac21,2") deviceType="iMac" ;;
-    # MacBook Air - M1/M2/M3/M4 (Mac9–Mac16)
-    *"Mac9,1"|*"Mac10,1"|*"Mac13,2"|*"Mac14,1"|*"Mac14,2"|*"Mac14,15"|*"Mac15,2"|*"Mac15,12"|*"Mac15,13"|*"Mac16,12"|*"Mac16,13") deviceType="MBA" ;;
-    # MacBook Air - M5 (2026)
-    *"Mac17,3"|*"Mac17,4") deviceType="MBA" ;;
-    # MacBook Pro - M1/M2/M3/M4 (Mac13–Mac16)
-    *"Mac13,3"|*"Mac13,4"|*"Mac14,5"|*"Mac14,6"|*"Mac14,7"|*"Mac14,9"|*"Mac14,10"|*"Mac15,3"|*"Mac15,4"|*"Mac15,6"|*"Mac15,7"|*"Mac15,8"|*"Mac15,9"|*"Mac15,10"|*"Mac15,11"|*"Mac16,1"|*"Mac16,5"|*"Mac16,6"|*"Mac16,7"|*"Mac16,8") deviceType="MBP" ;;
-    # MacBook Pro - M5 (2026): 14" M5, 14" M5 Pro/Max, 16" M5 Pro/Max
-    *"Mac17,5"|*"Mac17,6"|*"Mac17,7"|*"Mac17,8"|*"Mac17,9") deviceType="MBP" ;;
-    # Mac mini
-    *"Mac14,3"|*"Mac14,12"|*"Mac16,15") deviceType="Mini" ;;
-    # Mac Studio
-    *"Mac13,1"|*"Mac13,2"|*"Mac14,13"|*"Mac14,14") deviceType="MacStudio" ;;
-    # Mac Pro
-    *"Mac7,1"|*"Mac14,8") deviceType="MacPro" ;;
-    *) deviceType="Mac" ;;
+# Check Model Name first (macOS 26+ on Mac17,x and newer returns plain identifier
+# like "Mac17,4" with friendly name in separate "Model Name" field)
+# Fall back to Model Identifier substring match for older models (e.g. "MacBookAir10,1")
+case "$modelName" in
+    *"MacBook Air"*)  deviceType="MBA" ;;
+    *"MacBook Pro"*)  deviceType="MBP" ;;
+    *"iMac"*)         deviceType="iMac" ;;
+    *"Mac mini"*)     deviceType="Mini" ;;
+    *"Mac Studio"*)   deviceType="MacStudio" ;;
+    *"Mac Pro"*)      deviceType="MacPro" ;;
+    *)
+        # Fallback to Model Identifier for older macOS / edge cases
+        case "$deviceType" in
+            *"MacBookAir"*)  deviceType="MBA" ;;
+            *"MacBookPro"*)  deviceType="MBP" ;;
+            *"iMac"*)        deviceType="iMac" ;;
+            *"Macmini"*)     deviceType="Mini" ;;
+            *"MacStudio"*)   deviceType="MacStudio" ;;
+            *"MacPro"*)      deviceType="MacPro" ;;
+            # Raw Model Identifiers - iMac
+            *"Mac21,1"|*"Mac21,2") deviceType="iMac" ;;
+            # MacBook Air - M1/M2/M3/M4 (Mac9–Mac16)
+            *"Mac9,1"|*"Mac10,1"|*"Mac13,2"|*"Mac14,1"|*"Mac14,2"|*"Mac14,15"|*"Mac15,2"|*"Mac15,12"|*"Mac15,13"|*"Mac16,12"|*"Mac16,13") deviceType="MBA" ;;
+            # MacBook Air - M5 (2026)
+            *"Mac17,3"|*"Mac17,4") deviceType="MBA" ;;
+            # MacBook Pro - M1/M2/M3/M4 (Mac13–Mac16)
+            *"Mac13,3"|*"Mac13,4"|*"Mac14,5"|*"Mac14,6"|*"Mac14,7"|*"Mac14,9"|*"Mac14,10"|*"Mac15,3"|*"Mac15,4"|*"Mac15,6"|*"Mac15,7"|*"Mac15,8"|*"Mac15,9"|*"Mac15,10"|*"Mac15,11"|*"Mac16,1"|*"Mac16,5"|*"Mac16,6"|*"Mac16,7"|*"Mac16,8") deviceType="MBP" ;;
+            # MacBook Pro - M5 (2026)
+            *"Mac17,5"|*"Mac17,6"|*"Mac17,7"|*"Mac17,8"|*"Mac17,9") deviceType="MBP" ;;
+            # Mac mini
+            *"Mac14,3"|*"Mac14,12"|*"Mac16,15") deviceType="Mini" ;;
+            # Mac Studio
+            *"Mac13,1"|*"Mac13,2"|*"Mac14,13"|*"Mac14,14") deviceType="MacStudio" ;;
+            # Mac Pro
+            *"Mac7,1"|*"Mac14,8") deviceType="MacPro" ;;
+            *) deviceType="Mac" ;;
+        esac
+    ;;
 esac
 
 # Construct computer name
